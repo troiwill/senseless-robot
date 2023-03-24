@@ -1,0 +1,108 @@
+#! /usr/bin/env python3
+
+from senseless_robot.states import (
+    ComputeNextPose,
+    PredictPriorBelief,
+    SendRendezvousBelief,
+    MoveToRendezvousPose,
+    ListenForMeasurement,
+    UpdateBelief,
+)
+import rospy
+import smach
+
+
+def build_state_machine():
+    MACHINE_DONE = "done"
+    MACHINE_FAILED = "failed"
+    MACHINE_SUCCESS = "success"
+
+    RENDEZVOUS_STATE_MACHINE_NAME = "RendezvousStateMachine"
+
+    robot_state_machine = smach.StateMachine(outcomes=[MACHINE_DONE, MACHINE_FAILED])
+
+    with robot_state_machine:
+        smach.StateMachine.add(
+            label=ComputeNextPose.__name__,
+            state=ComputeNextPose(),
+            transitions={
+                ComputeNextPose.OC_HAVE_NEW_GOAL: PredictPriorBelief.__name__,
+                ComputeNextPose.OC_DONE: MACHINE_DONE,
+                ComputeNextPose.OC_FAILURE: MACHINE_FAILED,
+            },
+        )
+
+        smach.StateMachine.add(
+            label=PredictPriorBelief.__name__,
+            state=PredictPriorBelief(),
+            transitions={
+                PredictPriorBelief.OC_SUCCESS: RENDEZVOUS_STATE_MACHINE_NAME,
+                PredictPriorBelief.OC_FAILURE: MACHINE_FAILED,
+            },
+        )
+
+        rendezvous_concurrent_machine = smach.Concurrence(
+            outcomes=[MACHINE_SUCCESS, MACHINE_FAILED],
+            default_outcome=MACHINE_FAILED,
+            outcome_map={
+                MACHINE_SUCCESS: {
+                    SendRendezvousBelief.__name__: SendRendezvousBelief.OC_SENT,
+                    MoveToRendezvousPose.__name__: MoveToRendezvousPose.OC_ARRIVED,
+                },
+            },
+            input_keys=[PredictPriorBelief.OK_PRED_PRIOR_BELIEF],
+        )
+
+        with rendezvous_concurrent_machine:
+            smach.Concurrence.add(
+                label=SendRendezvousBelief.__name__, state=SendRendezvousBelief()
+            )
+
+            smach.Concurrence.add(
+                label=MoveToRendezvousPose.__name__, state=MoveToRendezvousPose()
+            )
+
+        smach.StateMachine.add(
+            label=RENDEZVOUS_STATE_MACHINE_NAME,
+            state=rendezvous_concurrent_machine,
+            transitions={
+                MACHINE_SUCCESS: ListenForMeasurement.__name__,
+                MACHINE_FAILED: MACHINE_FAILED,
+            },
+        )
+
+        smach.StateMachine.add(
+            label=ListenForMeasurement.__name__,
+            state=ListenForMeasurement(),
+            transitions={
+                ListenForMeasurement.OC_RECEIVED: UpdateBelief.__name__,
+                ListenForMeasurement.OC_FAILURE: MACHINE_FAILED,
+            },
+        )
+
+        smach.StateMachine.add(
+            label=UpdateBelief.__name__,
+            state=UpdateBelief(),
+            transitions={
+                UpdateBelief.OC_SUCCESS: ComputeNextPose.__name__,
+                UpdateBelief.OC_FAILURE: MACHINE_FAILED,
+            },
+        )
+
+    return robot_state_machine
+
+
+def main():
+    rospy.init_node("rendezvous_state_machine", anonymous=True, log_level=rospy.DEBUG)
+
+    rospy.loginfo("Building the rendezvous state machine.")
+    state_machine = build_state_machine()
+
+    rospy.loginfo("Executing the state machine.")
+    state_machine.execute()
+
+    rospy.spin()
+
+
+if __name__ == "__main__":
+    main()

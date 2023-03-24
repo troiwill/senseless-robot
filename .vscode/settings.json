@@ -1,0 +1,7 @@
+{
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/src/",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "${HOME}/.local/lib/python3.8/site-packages/"
+    ]
+}

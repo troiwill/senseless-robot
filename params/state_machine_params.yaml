@@ -1,0 +1,19 @@
+# Compute next pose state
+
+# Predict prior belief
+
+# Send rendezvous pose state
+rendezvous_belief_topic: rendezvous_belief
+
+# Move to rendezvous pose state
+goal_pose_topic: move_base_simple/goal
+velocity_cmd_topic: cmd_vel
+
+# Listen for measurement state
+measurement_from_viewer_topic: pose_measurements
+listen_wait_timeout: 30
+listen_max_messages: 5
+listen_delay: 5.0
+
+# Update belief state
+localizer_measurement_topic: global_pose

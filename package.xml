@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>senseless_robot_ros</name>
+  <version>0.0.1</version>
+  <description>A ROS state machine to help sensor-less robots navigate.</description>
+
+  <maintainer email="willkode@outlook.com">Troi Williams</maintainer>
+
+  <!-- One license tag required, multiple allowed, one license per tag -->
+  <!-- Commonly used license strings: -->
+  <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
+  <license>GPLv3</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>rospy</build_depend>
+  <build_export_depend>rospy</build_export_depend>
+  <exec_depend>rospy</exec_depend>
+
+</package>

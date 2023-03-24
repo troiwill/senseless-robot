@@ -1,0 +1,5 @@
+# Cache dirs
+__pycache__
+
+# Hidden files.
+.*

@@ -1,0 +1,39 @@
+<launch>
+    <arg name="x_pos" default="-2.0"/>
+    <arg name="y_pos" default="-0.5"/>
+    <arg name="z_pos" default="0.0"/>
+    <arg name="yaw" default="0.0"/>
+    <arg name="node_start_delay" default="5.0"/>
+
+    <!-- Load the ROS parameters -->
+    <rosparam command="load" file="$(find senseless_robot_ros)/params/turtlebot3_world_waypoints.yaml"/>
+    <rosparam command="load" file="$(find senseless_robot_ros)/params/state_machine_params.yaml"/>
+
+    <!-- Load the turtlebot3 and the gazebo world -->
+    <include file="$(find turtlebot3_gazebo)/launch/turtlebot3_world.launch">
+        <arg name="x_pos" value="$(arg x_pos)"/>
+        <arg name="y_pos" value="$(arg y_pos)"/>
+        <arg name="z_pos" value="$(arg z_pos)"/>
+    </include>
+
+    <!-- EKF for global localization -->
+    <include file="$(find senseless_robot_ros)/launch/includes/ekf.launch.xml">
+        <arg name="start_x_pos" value="$(arg x_pos)"/>
+        <arg name="start_y_pos" value="$(arg y_pos)"/>
+        <arg name="start_yaw" value="$(arg yaw)"/>
+    </include>
+
+    <!-- Move base for navigation -->
+    <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml"/>
+
+    <!-- Map server needed by move base -->
+    <node pkg="map_server" name="map_server" type="map_server" required="true"
+        args="$(find turtlebot3_navigation)/maps/map.yaml"/>
+
+    <!-- True pose node -->
+    <node pkg="senseless_robot_ros" name="true_pose_node" type="true_pose_node" required="true"
+        launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+
+    <!-- Rviz -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find senseless_robot_ros)/rviz/senseless_robot_default.rviz"/>
+</launch>

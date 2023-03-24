@@ -1,0 +1,5 @@
+<launch>
+    <!-- Rendezvous state machine node -->
+    <node pkg="senseless_robot_ros" name="rendezvous_sm_node" type="rendezvous_sm_node"
+        required="true" output="screen"/>
+</launch>

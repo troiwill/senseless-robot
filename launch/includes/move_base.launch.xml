@@ -1,0 +1,27 @@
+<launch>
+    <arg name="model" default="senseless_waffle"/>
+    <arg name="move_forward_only" default="false"/>
+    <arg name="cmd_vel_topic" default="cmd_vel"/>
+    <arg name="tf_prefix" default=""/>
+
+    <!-- move_base -->
+    <include file="$(find turtlebot3_navigation)/launch/move_base.launch">
+        <arg name="model" value="$(arg model)" />
+        <arg name="move_forward_only" value="$(arg move_forward_only)"/>
+        <arg name="cmd_vel_topic" value="$(arg cmd_vel_topic)"/>
+    </include>
+
+
+    <!-- Reset these move base params if necessary -->
+    <group unless="$(eval arg('tf_prefix') == '')">
+        <rosparam param="move_base/global_costmap/robot_base_frame" subst_value="true">
+            $(arg tf_prefix)/base_footprint
+        </rosparam>
+        <rosparam param="move_base/local_costmap/global_frame" subst_value="true">
+            $(arg tf_prefix)/odom
+        </rosparam>
+        <rosparam param="move_base/local_costmap/robot_base_frame" subst_value="true">
+            $(arg tf_prefix)/base_footprint
+        </rosparam>
+    </group>
+</launch>

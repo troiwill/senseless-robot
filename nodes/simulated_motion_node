@@ -1,0 +1,168 @@
+#! /usr/bin/env python3
+
+from __future__ import annotations
+from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
+import numpy as np
+import rospy
+from senseless_robot.filters.ekf import ExtendedKalmanFilter2D
+from senseless_robot.filters.belief import GaussianBelief
+from senseless_robot.states.utils import heading_to_quat, xyquat_covar_to_ros_posewithcovar, posewithcovar_to_belief
+import tf
+from threading import Lock
+
+
+class SimulatedMotionNode:
+    def __init__(self) -> None:
+        # Gather the ROS parameters.
+        sim_odom_topic = rospy.get_param("sim_odom_topic")
+        sim_velocity_cmd_topic = rospy.get_param("sim_velocity_cmd_topic")
+        sim_odom_frame = rospy.get_param("sim_odom_frame")
+        sim_robot_base_frame = rospy.get_param("sim_robot_base_frame")
+        sim_set_pose_topic = rospy.get_param("sim_set_pose_topic")
+
+        # Sanity checks.
+        assert isinstance(sim_odom_topic, str)
+        assert isinstance(sim_velocity_cmd_topic, str)
+        assert isinstance(sim_odom_frame, str)
+        assert isinstance(sim_robot_base_frame, str)
+        assert isinstance(sim_set_pose_topic, str)
+
+        # Prevents multiple commands from being processed at the same time.
+        self.vel_cmd_lock = Lock()
+
+        # Controls access to the odometry message.
+        self.odom_lock = Lock()
+
+        self.ekf_lock = Lock()
+
+        # Stores the odometry message.
+        self.sim_robot_base_frame = sim_robot_base_frame
+        self.sim_odom_frame = sim_odom_frame
+        self.odom = Odometry()
+        self.reset_odom()
+        rospy.sleep(0.01)
+
+        # Uses EKF to propagate uncertainty.
+        self.ekf = ExtendedKalmanFilter2D(x_dim=3, u_dim=2, z_dim=2)
+        self.ekf.V = np.diag([ 0.02 ** 2.0, np.radians(5.0) ** 2.0 ])
+
+        # Topic used to publish the odometry messages.
+        self.odom_pub = rospy.Publisher(sim_odom_topic, Odometry, queue_size=3)
+        self.pub_rate = rospy.Rate(30.0)
+        self.odom_tf = tf.TransformBroadcaster()
+        self.last_publish_tf_time = rospy.get_rostime()
+        
+        # Topic used to subscribe to the velocity and pose set messages.
+        self.vel_cmd_sub = rospy.Subscriber(sim_velocity_cmd_topic, Twist, self.velocity_command_callback, queue_size=50)
+        self.set_pose_sub = rospy.Subscriber(sim_set_pose_topic, Odometry, self.set_belief_callback, queue_size=3)
+
+        # Skips commands with delta time greater than 1.0.
+        self.skip_command_thres = 1.0
+        self.last_command_time = rospy.get_rostime()
+
+    def publish_odom(self):
+        with self.odom_lock:
+            self.odom.header.stamp = rospy.get_rostime()
+            self.odom_pub.publish(self.odom)
+
+            position = self.odom.pose.pose.position
+            orientation = self.odom.pose.pose.orientation
+            self.odom_tf.sendTransform(
+                translation=(position.x, position.y, position.z),
+                rotation=(orientation.x, orientation.y, orientation.z, orientation.w),
+                time=self.odom.header.stamp,
+                child=self.odom.child_frame_id,
+                parent=self.odom.header.frame_id,
+            )
+
+    def reset_odom(self):
+        with self.odom_lock:
+            rospy.logdebug("Resetting odometry.")
+            self.odom.pose.pose.position.x = 0.0
+            self.odom.pose.pose.position.y = 0.0
+            self.odom.pose.pose.position.z = 0.0
+
+            self.odom.pose.pose.orientation.x = 0.0
+            self.odom.pose.pose.orientation.y = 0.0
+            self.odom.pose.pose.orientation.z = 0.0
+            self.odom.pose.pose.orientation.w = 1.0
+
+            self.odom.pose.covariance = np.eye(6).flatten().tolist()
+
+            self.odom.twist.twist.linear.x = 0.0
+            self.odom.twist.twist.linear.y = 0.0
+            self.odom.twist.twist.linear.z = 0.0
+
+            self.odom.twist.twist.angular.x = 0.0
+            self.odom.twist.twist.angular.y = 0.0
+            self.odom.twist.twist.angular.z = 0.0
+
+            self.odom.twist.covariance = (np.eye(6) * 0.001).flatten().tolist()
+
+            self.odom.child_frame_id = self.sim_robot_base_frame
+            self.odom.header.frame_id = self.sim_odom_frame
+
+    def set_belief_callback(self, odom_msg: Odometry) -> None:
+        belief = posewithcovar_to_belief(pose=odom_msg.pose)
+        with self.ekf_lock:
+            rospy.logdebug(f"Setting belief to:\n{belief}")
+            self.ekf.set_belief(belief=belief)
+
+            # Update the odom.
+            self.update_odom(belief=belief)
+
+    def spin(self):
+        while not rospy.is_shutdown():
+            self.publish_odom()
+            self.pub_rate.sleep()
+            
+    def update_odom(self, belief: GaussianBelief) -> None:
+        with self.odom_lock:
+            x = belief.x.flatten()
+            P = belief.P
+
+            quat = heading_to_quat(x[2])
+            posewithcovar = xyquat_covar_to_ros_posewithcovar(
+                x=x[0], y=x[1], quat=quat, covar=P.flatten().tolist()
+            )
+
+            # Update the odometry message time and pose.
+            self.odom.header.stamp = rospy.get_rostime()
+            self.odom.pose = posewithcovar
+            rospy.logdebug("Odom updated!")
+
+    def velocity_command_callback(self, vel_cmd: Twist) -> None:
+        """
+        Receives the velocity command for prior belief prediction.
+        Following code assumes a simple velocity-based motion model with the EKF.
+        """
+        with self.vel_cmd_lock:
+            # Check if time between this and the last command.
+            current_time = rospy.get_rostime()
+            dt = (current_time - self.last_command_time).to_sec()
+            self.last_command_time = current_time
+
+            rospy.logdebug(f"dt = {dt}")
+            if dt >= self.skip_command_thres:
+                return None
+
+            # Propagate the belief.
+            with self.ekf_lock:
+                u = np.array([vel_cmd.linear.x, vel_cmd.angular.z]).reshape(2, 1)
+                rospy.logdebug(f"Propagating belief with command: {u.flatten()}")
+                self.ekf.predict(u=u, dt=dt)
+
+                # Now, publish the transform and the odometry message.
+                belief = self.ekf.belief
+                rospy.logdebug(f"New belief:\n{belief}")
+                self.update_odom(belief=belief)
+
+
+if __name__ == "__main__":
+    rospy.init_node("simulated_motion_node", anonymous=True, log_level=rospy.DEBUG)
+    try:
+        SimulatedMotionNode().spin()
+
+    except:
+        pass

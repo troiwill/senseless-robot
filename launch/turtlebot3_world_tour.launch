@@ -4,12 +4,17 @@
     <arg name="z_pos" default="0.0"/>
     <arg name="yaw" default="0.0"/>
     <arg name="node_start_delay" default="5.0"/>
+    <arg name="sim_ns" default="sim"/>
 
     <!-- Load the ROS parameters -->
     <rosparam command="load" file="$(find senseless_robot_ros)/params/turtlebot3_world_waypoints.yaml"/>
     <rosparam command="load" file="$(find senseless_robot_ros)/params/state_machine_params.yaml"/>
 
     <!-- Load the turtlebot3 and the gazebo world -->
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+        <param name="publish_frequency" type="double" value="50.0" />
+    </node>
+    
     <include file="$(find turtlebot3_gazebo)/launch/turtlebot3_world.launch">
         <arg name="x_pos" value="$(arg x_pos)"/>
         <arg name="y_pos" value="$(arg y_pos)"/>
@@ -23,9 +28,6 @@
         <arg name="start_yaw" value="$(arg yaw)"/>
     </include>
 
-    <!-- Move base for navigation -->
-    <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml"/>
-
     <!-- Map server needed by move base -->
     <node pkg="map_server" name="map_server" type="map_server" required="true"
         args="$(find turtlebot3_navigation)/maps/map.yaml"/>
@@ -36,4 +38,21 @@
 
     <!-- Rviz -->
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find senseless_robot_ros)/rviz/senseless_robot_default.rviz"/>
+
+    <!-- Move base for navigation -->
+    <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml"/>
+    
+    <node pkg="tf" type="static_transform_publisher" name="odom_to_sim_odom"
+            args="0 0 0 0 0 0 odom $(arg sim_ns)/odom 100"/>
+
+    <node pkg="senseless_robot_ros" type="simulated_motion_node" name="simulated_motion_node"
+        required="true" output="screen"/>
+
+    <group ns="$(arg sim_ns)">
+        <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml">
+            <arg name="tf_prefix" value="$(arg sim_ns)"/>
+            <arg name="odom_topic" value="/$(arg sim_ns)/odom"/>
+            <arg name="cmd_vel_topic" value="/$(arg sim_ns)/cmd_vel"/>
+        </include>        
+    </group>
 </launch>

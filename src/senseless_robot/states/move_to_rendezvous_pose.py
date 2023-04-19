@@ -1,5 +1,6 @@
-from threading import Lock
-from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Twist
+from actionlib.simple_action_client import SimpleActionClient
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from geometry_msgs.msg import PoseWithCovarianceStamped
 import rospy
 import smach
 
@@ -20,82 +21,41 @@ class MoveToRendezvousPose(smach.State):
         )
 
         # Gather the ROS parameters.
-        goal_pose_topic = rospy.get_param("goal_pose_topic")
-        velocity_cmd_topic = rospy.get_param("velocity_cmd_topic")
+        controller_name = rospy.get_param("controller_name")
 
-        # Sanity checks.
-        assert isinstance(goal_pose_topic, str)
-        assert isinstance(velocity_cmd_topic, str)
-
-        # Subscribe to velocity command topic.
-        self.vel_cmd_sub = rospy.Subscriber(
-            velocity_cmd_topic, Twist, self.velocity_command_callback, queue_size=3
-        )
-        self.last_vel_cmd_lock = Lock()
-        self.last_vel_cmd = [0.0, 0.0]
-
-        # Create a publisher that'll tell the platform to move to the goal.
-        self.next_goal_pub = rospy.Publisher(goal_pose_topic, PoseStamped, queue_size=1)
+        # Controller client variable.
+        self.controller_client = SimpleActionClient(controller_name, MoveBaseAction)
+        self.controller_client.wait_for_server()
 
     def execute(self, ud):
         outcome: str = MoveToRendezvousPose.OC_ARRIVED
 
         try:
             # Ensure we received the appropriate message type.
-            pred_prior_belief = ud.pred_prior_belief
+            pred_prior_belief: PoseWithCovarianceStamped = ud.pred_prior_belief
             if not isinstance(pred_prior_belief, PoseWithCovarianceStamped):
                 raise TypeError(
                     f"pred_prior_belief is type {type(pred_prior_belief)}, but expected PoseWithCovarianceStamped."
                 )
 
-            # Extract the pose portion of the message.
-            rendezvous_pose = PoseStamped()
-            rendezvous_pose.header = pred_prior_belief.header
+            rospy.logdebug("Creating the goal pose.")
+            goal = MoveBaseGoal()
+            goal.target_pose.header = pred_prior_belief.header
+            goal.target_pose.pose = pred_prior_belief.pose.pose
 
-            rendezvous_pose.pose.position.x = pred_prior_belief.pose.pose.position.x
-            rendezvous_pose.pose.position.y = pred_prior_belief.pose.pose.position.y
-            rendezvous_pose.pose.position.z = pred_prior_belief.pose.pose.position.z
-
-            rendezvous_pose.pose.orientation.x = (
-                pred_prior_belief.pose.pose.orientation.x
-            )
-            rendezvous_pose.pose.orientation.y = (
-                pred_prior_belief.pose.pose.orientation.y
-            )
-            rendezvous_pose.pose.orientation.z = (
-                pred_prior_belief.pose.pose.orientation.z
-            )
-            rendezvous_pose.pose.orientation.w = (
-                pred_prior_belief.pose.pose.orientation.w
-            )
-
-            # Publish the message.
-            rospy.loginfo(
-                f"Telling the platform to move to the goal:\n{rendezvous_pose.pose}"
-            )
-            for _ in range(5):
-                self.next_goal_pub.publish(rendezvous_pose)
-                rospy.sleep(0.1)
-
-            # Now, wait til the platform arrives.
-            rospy.sleep(3.0)
-            rospy.loginfo("Waiting for the platform to arrive at the destination.")
-            while self.is_moving():
-                rospy.sleep(0.25)
+            # Use the action client to send the goal.
+            rospy.loginfo(f"Sending the goal to the controller:\n{goal.target_pose.pose}")
+            self.controller_client.send_goal(goal)
+            
+            duration = 600.0
+            rospy.loginfo(f"Waiting for the platform to arrive (timeout = {duration:.1f} s).")
+            result = self.controller_client.wait_for_result(timeout=rospy.Duration.from_sec(duration))
+            if result == False:
+                rospy.logerr(f"Controller did NOT succeed within time limit {duration:.1f} s.")
+                raise Exception("Controller failed.")
 
         except:
             outcome = MoveToRendezvousPose.OC_FAILURE
 
         rospy.loginfo(f"{MoveToRendezvousPose.__name__} outcome: {outcome}")
         return outcome
-
-    def is_moving(self) -> bool:
-        with self.last_vel_cmd_lock:
-            lin_x, ang_z = self.last_vel_cmd
-
-        return abs(lin_x) > 0.0 or abs(ang_z) > 0.0
-
-    def velocity_command_callback(self, cmd_vel: Twist) -> None:
-        with self.last_vel_cmd_lock:
-            self.last_vel_cmd[0] = cmd_vel.linear.x
-            self.last_vel_cmd[1] = cmd_vel.angular.z

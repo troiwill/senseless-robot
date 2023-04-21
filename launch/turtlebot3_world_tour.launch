@@ -3,6 +3,8 @@
     <arg name="y_pos" default="-0.5"/>
     <arg name="z_pos" default="0.0"/>
     <arg name="yaw" default="0.0"/>
+    <arg name="rviz_file" default="$(find senseless_robot_ros)/rviz/senseless_robot_default.rviz"/>
+    <arg name="map_file" default="$(find turtlebot3_navigation)/maps/map.yaml"/>
     <arg name="node_start_delay" default="5.0"/>
     <arg name="sim_ns" default="sim"/>
 
@@ -19,40 +21,20 @@
         <arg name="x_pos" value="$(arg x_pos)"/>
         <arg name="y_pos" value="$(arg y_pos)"/>
         <arg name="z_pos" value="$(arg z_pos)"/>
+        <arg name="yaw"   value="$(arg yaw)"/>
     </include>
 
-    <!-- EKF for global localization -->
-    <include file="$(find senseless_robot_ros)/launch/includes/ekf.launch.xml">
-        <arg name="start_x_pos" value="$(arg x_pos)"/>
-        <arg name="start_y_pos" value="$(arg y_pos)"/>
-        <arg name="start_yaw" value="$(arg yaw)"/>
+    <!--  -->
+    <include file="$(find senseless_robot_ros)/launch/navigation.launch">
+        <arg name="x_pos" value="$(arg x_pos)"/>
+        <arg name="y_pos" value="$(arg y_pos)"/>
+        <arg name="yaw" value="$(arg yaw)"/>
+        <arg name="map_file" value="$(arg map_file)"/>
+        <arg name="rviz_file" value="$(arg rviz_file)"/>
+        <arg name="sim_ns" value="$(arg sim_ns)"/>
     </include>
-
-    <!-- Map server needed by move base -->
-    <node pkg="map_server" name="map_server" type="map_server" required="true"
-        args="$(find turtlebot3_navigation)/maps/map.yaml"/>
 
     <!-- True pose node -->
     <node pkg="senseless_robot_ros" name="true_pose_node" type="true_pose_node" required="true"
         launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
-
-    <!-- Rviz -->
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find senseless_robot_ros)/rviz/senseless_robot_default.rviz"/>
-
-    <!-- Move base for navigation -->
-    <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml"/>
-    
-    <node pkg="tf" type="static_transform_publisher" name="odom_to_sim_odom"
-            args="0 0 0 0 0 0 odom $(arg sim_ns)/odom 100"/>
-
-    <node pkg="senseless_robot_ros" type="simulated_motion_node" name="simulated_motion_node"
-        required="true" output="screen"/>
-
-    <group ns="$(arg sim_ns)">
-        <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml">
-            <arg name="tf_prefix" value="$(arg sim_ns)"/>
-            <arg name="odom_topic" value="/$(arg sim_ns)/odom"/>
-            <arg name="cmd_vel_topic" value="/$(arg sim_ns)/cmd_vel"/>
-        </include>        
-    </group>
 </launch>

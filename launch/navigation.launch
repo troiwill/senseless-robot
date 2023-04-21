@@ -1,0 +1,40 @@
+<launch>
+    <arg name="x_pos" default="0.0"/>
+    <arg name="y_pos" default="0.0"/>
+    <arg name="z_pos" default="0.0"/>
+    <arg name="yaw"   default="0.0"/>
+    <arg name="map_file"/>
+    <arg name="rviz_file" default="$(find senseless_robot_ros)/rviz/senseless_robot_default.rviz"/>
+    <arg name="sim_ns" default="sim"/>
+
+    <!-- EKF for global localization -->
+    <include file="$(find senseless_robot_ros)/launch/includes/ekf.launch.xml">
+        <arg name="start_x_pos" value="$(arg x_pos)"/>
+        <arg name="start_y_pos" value="$(arg y_pos)"/>
+        <arg name="start_yaw" value="$(arg yaw)"/>
+    </include>
+
+    <!-- Map server -->
+    <node pkg="map_server" name="map_server" type="map_server" required="true" args="$(arg map_file)"/>
+
+    <!-- Rviz -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_file)"/>
+
+    <!-- Fixes simulated odom transform to TB odom -->
+    <node pkg="tf" type="static_transform_publisher" name="odom_to_sim_odom"
+            args="0 0 0 0 0 0 odom $(arg sim_ns)/odom 100"/>
+
+    <!-- Move base for navigation -->
+    <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml"/>
+
+    <!-- Simulates the belief propagation -->
+    <node pkg="senseless_robot_ros" type="simulated_motion_node" name="simulated_motion_node"
+        required="true" output="screen"/>
+    <group ns="$(arg sim_ns)">
+        <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml">
+            <arg name="tf_prefix" value="$(arg sim_ns)"/>
+            <arg name="odom_topic" value="/$(arg sim_ns)/odom"/>
+            <arg name="cmd_vel_topic" value="/$(arg sim_ns)/cmd_vel"/>
+        </include>        
+    </group>
+</launch>

@@ -3,7 +3,8 @@
     <arg name="y_pos" default="0.0"/>
     <arg name="z_pos" default="0.0"/>
     <arg name="yaw"   default="0.0"/>
-    <arg name="map_file"/>
+    <arg name="map_file"     default="$(find turtlebot3_navigation)/maps/map.yaml"/>
+    <arg name="octomap_file" default=""/>
     <arg name="rviz_file" default="$(find senseless_robot_ros)/rviz/senseless_robot_default.rviz"/>
     <arg name="sim_ns" default="sim"/>
 
@@ -14,8 +15,30 @@
         <arg name="start_yaw" value="$(arg yaw)"/>
     </include>
 
-    <!-- Map server -->
-    <node pkg="map_server" name="map_server" type="map_server" required="true" args="$(arg map_file)"/>
+    <!-- Map server [optional] -->
+    <group if="$(eval arg('map_file') != '')">
+        <node pkg="map_server" name="map_server" type="map_server" required="true" args="$(arg map_file)"/>
+    </group>
+
+    <!-- Octomap [optional] -->
+    <group if="$(eval arg('octomap_file') != '')">
+        <remap from="/projected_map" to="/map" />
+        <node pkg="octomap_server" type="octomap_server_node" name="octomap_server" args="$(arg octomap_file)">
+            <param name="resolution" value="0.05" />
+            <!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
+            <param name="frame_id" type="string" value="map" />
+            <!-- maximum range to integrate (speedup!) -->
+            <param name="sensor_model/max_range" value="30.0" />
+            <param name="latch" value="true"/>
+            <param name="pointcloud_min_z" value="-200.0"/>
+            <param name="pointcloud_max_z" value="200.0"/>
+            <remap from="cloud_in" to="/random/thing/" />
+            <param name="pointcloud_min_z" value="-200.0"/>
+            <param name="pointcloud_max_z" value="200.0"/>
+            <param name="occupancy_min_z" value="0.02"/>
+            <param name="occupancy_max_z" value="20"/>
+        </node>
+    </group>
 
     <!-- Rviz -->
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_file)"/>

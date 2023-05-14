@@ -30,6 +30,7 @@
         <arg name="y_pos" value="$(arg y_pos)"/>
         <arg name="yaw" value="$(arg yaw)"/>
         <arg name="map_file" value="$(arg map_file)"/>
+        <arg name="octomap_file" value=""/>
         <arg name="rviz_file" value="$(arg rviz_file)"/>
         <arg name="sim_ns" value="$(arg sim_ns)"/>
     </include>

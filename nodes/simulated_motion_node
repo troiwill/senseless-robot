@@ -45,7 +45,7 @@ class SimulatedMotionNode:
 
         # Uses EKF to propagate uncertainty.
         self.ekf = ExtendedKalmanFilter2D(x_dim=3, u_dim=2, z_dim=2)
-        self.ekf.V = np.diag([ 0.02 ** 2.0, np.radians(5.0) ** 2.0 ])
+        self.ekf.V = np.diag([ 0.05 ** 2.0, 0.000001 ]) #np.radians(5.0) ** 2.0 ])
 
         # Topic used to publish the odometry messages.
         self.odom_pub = rospy.Publisher(sim_odom_topic, Odometry, queue_size=3)

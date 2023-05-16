@@ -20,18 +20,21 @@ class ComputeNextPose(smach.State):
             output_keys=[ComputeNextPose.OK_NEXT_GOAL],
         )
 
-        # Get the ROS parameters
+        # Get the ROS parameters.
+        rospy.logdebug("Gathering the ROS parameters.")
         waypoints = rospy.get_param("waypoints")
         waypoints = np.array(waypoints)
         rospy.logdebug(f"Got the following waypoints:\n{waypoints}")
 
         # Sanity checks.
+        rospy.logdebug("Performing the sanity checks.")
         assert len(waypoints.shape) == 2
         assert len(waypoints) > 0
         assert waypoints.shape[1] == 3
 
         self.waypoints: np.ndarray = waypoints.copy()
         self.w_index: int = 0
+        rospy.logdebug(f"Loaded {len(self.waypoints)} waypoints.")
 
     def execute(self, ud):
         try:

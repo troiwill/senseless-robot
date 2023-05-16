@@ -3,7 +3,8 @@
     <arg name="move_forward_only" default="false"/>
     <arg name="cmd_vel_topic" default="cmd_vel"/>
     <arg name="odom_topic" default="odom"/>
-    <arg name="tf_prefix" default=""/>
+    <arg name="map_topic" default="map"/>
+    <arg name="rosparam_tf_prefix" default="tb3"/>
 
     <!-- move_base -->
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
@@ -16,20 +17,26 @@
         <rosparam file="$(find turtlebot3_navigation)/param/dwa_local_planner_params_$(arg model).yaml" command="load" />
         <remap from="cmd_vel" to="$(arg cmd_vel_topic)"/>
         <remap from="odom" to="$(arg odom_topic)"/>
-        <remap from="/$(arg tf_prefix)/map" to="/map"/>
+        <remap from="map" to="$(arg map_topic)"/>
         <param name="DWAPlannerROS/min_vel_x" value="0.0" if="$(arg move_forward_only)" />
     </node>
 
     <!-- Reset these move base params if necessary -->
-    <group unless="$(eval arg('tf_prefix') == '')">
+    <group unless="$(eval rosparam_tf_prefix == '')">
         <rosparam param="move_base/global_costmap/robot_base_frame" subst_value="true">
-            $(arg tf_prefix)/base_footprint
+            $(arg rosparam_tf_prefix)/base_footprint
         </rosparam>
         <rosparam param="move_base/local_costmap/global_frame" subst_value="true">
-            $(arg tf_prefix)/odom
+            $(arg rosparam_tf_prefix)/odom
         </rosparam>
         <rosparam param="move_base/local_costmap/robot_base_frame" subst_value="true">
-            $(arg tf_prefix)/base_footprint
+            $(arg rosparam_tf_prefix)/base_footprint
+        </rosparam>
+        <rosparam param="move_base/global_costmap/scan/sensor_frame" subst_value="true">
+            $(arg rosparam_tf_prefix)/base_scan
+        </rosparam>
+        <rosparam param="move_base/global_costmap/scan/topic" subst_value="true">
+            $(arg rosparam_tf_prefix)/scan
         </rosparam>
     </group>
 </launch>

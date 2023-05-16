@@ -1,13 +1,16 @@
+model_name: tb3
+true_pose_source: gazebo
+
 # Compute next pose state
 
 # Predict prior belief
-sim_odom_topic: /sim/odom
-sim_velocity_cmd_topic: /sim/cmd_vel
-sim_controller_name: /sim/move_base
-sim_odom_frame: sim/odom
-sim_robot_base_frame: sim/base_footprint
-sim_set_pose_topic: /sim/set_pose
-odom_topic: /odometry/filtered
+sim_odom_topic: /tb3/sim/odom
+sim_velocity_cmd_topic: /tb3/sim/cmd_vel
+sim_controller_name: /tb3/sim/move_base
+sim_odom_frame: tb3/sim/odom
+sim_robot_base_frame: tb3/sim/base_footprint
+sim_set_pose_topic: /tb3/sim/set_pose
+odom_topic: /tb3/odometry/filtered
 
 # Send rendezvous pose state
 rendezvous_belief_topic: rendezvous_belief

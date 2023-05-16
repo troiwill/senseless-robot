@@ -7,35 +7,47 @@
     <arg name="map_file" default="$(find turtlebot3_navigation)/maps/map.yaml"/>
     <arg name="node_start_delay" default="5.0"/>
     <arg name="sim_ns" default="sim"/>
+    <arg name="tf_prefix" value="tb3"/>
 
-    <!-- Load the ROS parameters -->
-    <rosparam command="load" file="$(find senseless_robot_ros)/params/turtlebot3_world_waypoints.yaml"/>
-    <rosparam command="load" file="$(find senseless_robot_ros)/params/state_machine_params.yaml"/>
+    <!-- Rviz -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_file)"/>
 
-    <!-- Load the turtlebot3 and the gazebo world -->
-    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
-        <param name="publish_frequency" type="double" value="50.0" />
-    </node>
-    
-    <include file="$(find turtlebot3_gazebo)/launch/turtlebot3_world.launch">
-        <arg name="x_pos" value="$(arg x_pos)"/>
-        <arg name="y_pos" value="$(arg y_pos)"/>
-        <arg name="z_pos" value="$(arg z_pos)"/>
-        <arg name="yaw"   value="$(arg yaw)"/>
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/turtlebot3_world.world"/>
+        <arg name="paused" value="false"/>
+        <arg name="use_sim_time" value="true"/>
+        <arg name="gui" value="true"/>
+        <arg name="headless" value="false"/>
+        <arg name="debug" value="false"/>
     </include>
 
-    <!--  -->
-    <include file="$(find senseless_robot_ros)/launch/navigation.launch">
-        <arg name="x_pos" value="$(arg x_pos)"/>
-        <arg name="y_pos" value="$(arg y_pos)"/>
-        <arg name="yaw" value="$(arg yaw)"/>
-        <arg name="map_file" value="$(arg map_file)"/>
-        <arg name="octomap_file" value=""/>
-        <arg name="rviz_file" value="$(arg rviz_file)"/>
-        <arg name="sim_ns" value="$(arg sim_ns)"/>
-    </include>
+    <group ns="$(arg tf_prefix)">
+        <!-- Load the ROS parameters -->
+        <rosparam command="load" file="$(find senseless_robot_ros)/params/turtlebot3_world_waypoints.yaml"/>
+        <rosparam command="load" file="$(find senseless_robot_ros)/params/state_machine_params.yaml"/>
 
-    <!-- True pose node -->
-    <node pkg="senseless_robot_ros" name="true_pose_node" type="true_pose_node" required="true"
-        launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+        <include file="$(find senseless_robot_ros)/launch/spawn_tb3.launch">
+            <arg name="x" value="$(arg x_pos)"/>
+            <arg name="y" value="$(arg y_pos)"/>
+            <arg name="z" value="$(arg z_pos)"/>
+            <arg name="R" value="0.0"/>
+            <arg name="P" value="0.0"/>
+            <arg name="Y" value="$(arg yaw)"/>
+            <arg name="tf_prefix" value="$(arg tf_prefix)"/>
+        </include>
+
+        <!--  -->
+        <include file="$(find senseless_robot_ros)/launch/navigation.launch">
+            <arg name="x_pos" value="$(arg x_pos)"/>
+            <arg name="y_pos" value="$(arg y_pos)"/>
+            <arg name="yaw" value="$(arg yaw)"/>
+            <arg name="map_file" value="$(arg map_file)"/>
+            <arg name="octomap_file" value=""/>
+            <arg name="sim_ns" value="$(arg sim_ns)"/>
+        </include>
+
+        <!-- True pose node -->
+        <node pkg="senseless_robot_ros" name="true_pose_node" type="true_pose_node" required="true"
+            launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+    </group>
 </launch>

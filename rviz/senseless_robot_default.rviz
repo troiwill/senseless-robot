@@ -56,7 +56,7 @@ Visualization Manager:
       Draw Behind: false
       Enabled: true
       Name: Map
-      Topic: /map
+      Topic: /tb3/map
       Unreliable: false
       Use Timestamp: false
       Value: true
@@ -191,7 +191,7 @@ Visualization Manager:
       Length: 0.20000000298023224
       Name: Axes
       Radius: 0.05000000074505806
-      Reference Frame: sim/base_footprint
+      Reference Frame: tb3/sim/base_footprint
       Show Trail: false
       Value: true
     - Alpha: 1
@@ -200,7 +200,7 @@ Visualization Manager:
       Length: 0.20000000298023224
       Name: Axes
       Radius: 0.05000000074505806
-      Reference Frame: base_footprint
+      Reference Frame: tb3/base_footprint
       Show Trail: false
       Value: true
   Enabled: true
@@ -268,4 +268,4 @@ Window Geometry:
     collapsed: false
   Width: 1563
   X: 275
-  Y: 37
+  Y: 27

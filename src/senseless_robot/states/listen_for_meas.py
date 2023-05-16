@@ -18,12 +18,14 @@ class ListenForMeasurement(smach.State):
         )
 
         # Gather the ROS parameters.
+        rospy.logdebug("Gathering the ROS parameters.")
         meas_from_viewer_topic = rospy.get_param("measurement_from_viewer_topic")
         wait_timeout = float(rospy.get_param("listen_wait_timeout", 30.0))
         max_messages = int(rospy.get_param("listen_max_messages", 1))
         listen_delay = float(rospy.get_param("listen_delay", 0.0))
 
         # Sanity checks.
+        rospy.logdebug("Performing the sanity checks.")
         assert isinstance(meas_from_viewer_topic, str)
         assert isinstance(wait_timeout, (int, float))
         assert isinstance(max_messages, int)
@@ -33,6 +35,7 @@ class ListenForMeasurement(smach.State):
         assert listen_delay >= 0.0
 
         # Subscribe to topic that the viewer will publish on.
+        rospy.logdebug(f"Setting up measurement from viewer message callback. Topic = {meas_from_viewer_topic}")
         self.sub = rospy.Subscriber(
             meas_from_viewer_topic,
             PoseWithCovarianceStamped,

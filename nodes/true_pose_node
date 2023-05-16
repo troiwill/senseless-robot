@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
-from gazebo_msgs.msg._ModelStates import ModelStates
-from geometry_msgs.msg._PoseWithCovarianceStamped import PoseWithCovarianceStamped
+from gazebo_msgs.msg import ModelStates
+from geometry_msgs.msg import PoseWithCovarianceStamped
 import numpy as np
 import rospy
 
@@ -54,8 +54,8 @@ class TruePosePublisher:
 def main():
     rospy.init_node("true_pose_node", anonymous=True, log_level=rospy.DEBUG)
 
-    model_name = rospy.get_param("model_name", "turtlebot3_senseless_waffle")
-    true_pose_source = rospy.get_param("true_pose_source", "gazebo")
+    model_name = rospy.get_param("model_name")
+    true_pose_source = rospy.get_param("true_pose_source")
     measurement_from_viewer_topic = rospy.get_param("measurement_from_viewer_topic")
 
     true_pose_publisher = TruePosePublisher(

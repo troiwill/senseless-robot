@@ -17,14 +17,17 @@ class UpdateBelief(smach.State):
         )
 
         # Gather ROS parameters.
+        rospy.logdebug("Gathering the ROS parameters.")
         localizer_measurement_topic: str = rospy.get_param(
             "localizer_measurement_topic"
         )
 
         # Sanity checks.
+        rospy.logdebug("Performing the sanity checks.")
         assert isinstance(localizer_measurement_topic, str)
 
         # Publish to topic that the localizer listens to.
+        rospy.logdebug(f"Setting up the publisher for localization measurements. Topic = {localizer_measurement_topic}")
         self.pub = rospy.Publisher(
             localizer_measurement_topic, PoseWithCovarianceStamped, queue_size=1
         )

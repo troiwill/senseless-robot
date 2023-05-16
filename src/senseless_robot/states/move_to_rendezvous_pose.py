@@ -21,9 +21,15 @@ class MoveToRendezvousPose(smach.State):
         )
 
         # Gather the ROS parameters.
+        rospy.logdebug("Gathering the ROS parameters.")
         controller_name = rospy.get_param("controller_name")
 
+        # Sanity checks.
+        rospy.logdebug("Performing the sanity checks.")
+        assert controller_name != ""
+
         # Controller client variable.
+        rospy.logdebug(f"Setting up the controller client. Controller name = {controller_name}")
         self.controller_client = SimpleActionClient(controller_name, MoveBaseAction)
         self.controller_client.wait_for_server()
 

@@ -1,5 +1,4 @@
 from __future__ import annotations
-from actionlib_msgs.msg._GoalStatus import GoalStatus
 from actionlib.simple_action_client import SimpleActionClient
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
@@ -33,28 +32,34 @@ class PredictPriorBelief(smach.State):
         )
 
         # Gather the ROS parameters.
+        rospy.logdebug("Gathering the ROS parameters.")
         sim_odom_topic = rospy.get_param("sim_odom_topic")
         sim_controller_name = rospy.get_param("sim_controller_name")
         odom_topic = rospy.get_param("odom_topic")
         sim_set_pose_topic = rospy.get_param("sim_set_pose_topic")
 
         # Sanity checks.
+        rospy.logdebug("Performing the sanity checks.")
         assert isinstance(sim_odom_topic, str)
         assert isinstance(sim_controller_name, str)
         assert isinstance(odom_topic, str)
         assert isinstance(sim_set_pose_topic, str)
 
+        rospy.logdebug(f"Setting up motion node publisher. Topic = {sim_set_pose_topic}")
         self.motion_node_set_pose_pub = rospy.Publisher(sim_set_pose_topic, Odometry, queue_size=1)
 
+        rospy.logdebug(f"Setting up odom estimator. Topic = {odom_topic}")
         self.estimated_odom_lock = Lock()
         self.latest_estimated_odom = Odometry()
         self.ekf_odom_sub = rospy.Subscriber(odom_topic, Odometry, self.estimated_odom_callback, queue_size=3)
         
+        rospy.logdebug(f"Setting up simulated odom estimator. Topic = {sim_odom_topic}")
         self.simulated_odom_lock = Lock()
         self.latest_simulated_odom = Odometry()
         self.motion_odom_sub = rospy.Subscriber(sim_odom_topic, Odometry, self.simulated_odom_callback, queue_size=3)
 
         # Motion client variable.
+        rospy.logdebug(f"Setting up simulation controller client. Controller name = {sim_controller_name}")
         self.sim_controller_client = SimpleActionClient(sim_controller_name, MoveBaseAction)
         self.sim_controller_client.wait_for_server()
 

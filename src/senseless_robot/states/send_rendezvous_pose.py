@@ -19,12 +19,15 @@ class SendRendezvousBelief(smach.State):
         )
 
         # Get ROS params.
+        rospy.logdebug("Gathering the ROS parameters.")
         rendezvous_belief_topic = rospy.get_param("rendezvous_belief_topic")
 
         # Sanity checks.
+        rospy.logdebug("Performing the sanity checks.")
         assert isinstance(rendezvous_belief_topic, str)
 
         # Create a publisher that will send the rendezvous belief.
+        rospy.logdebug(f"Setting up the publisher for the rendezvous belief. Topic = {rendezvous_belief_topic}")
         self.pub = rospy.Publisher(
             rendezvous_belief_topic, PoseWithCovarianceStamped, queue_size=1
         )

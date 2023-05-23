@@ -26,7 +26,7 @@
 
     <!-- Octomap [optional] -->
     <group if="$(eval arg('octomap_file') != '')">
-        <remap from="projected_map" to="/map" />
+        <remap from="projected_map" to="map" />
         <node pkg="octomap_server" type="octomap_server_node" name="octomap_server"
             args="$(arg octomap_file)">
             <param name="resolution" value="0.05" />

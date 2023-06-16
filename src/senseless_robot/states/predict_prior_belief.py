@@ -7,7 +7,7 @@ import rospy
 import smach
 from senseless_robot.states.utils import (
     heading_to_quat,
-    posewithcovar_to_belief,
+    posewithcovar_to_belief2D,
     xyquat_to_ros_pose,
     xyquat_covar_to_ros_posewithcovar,
 )
@@ -45,22 +45,34 @@ class PredictPriorBelief(smach.State):
         assert isinstance(odom_topic, str)
         assert isinstance(sim_set_pose_topic, str)
 
-        rospy.logdebug(f"Setting up motion node publisher. Topic = {sim_set_pose_topic}")
-        self.motion_node_set_pose_pub = rospy.Publisher(sim_set_pose_topic, Odometry, queue_size=1)
+        rospy.logdebug(
+            f"Setting up motion node publisher. Topic = {sim_set_pose_topic}"
+        )
+        self.motion_node_set_pose_pub = rospy.Publisher(
+            sim_set_pose_topic, Odometry, queue_size=1
+        )
 
         rospy.logdebug(f"Setting up odom estimator. Topic = {odom_topic}")
         self.estimated_odom_lock = Lock()
         self.latest_estimated_odom = Odometry()
-        self.ekf_odom_sub = rospy.Subscriber(odom_topic, Odometry, self.estimated_odom_callback, queue_size=3)
-        
+        self.ekf_odom_sub = rospy.Subscriber(
+            odom_topic, Odometry, self.estimated_odom_callback, queue_size=3
+        )
+
         rospy.logdebug(f"Setting up simulated odom estimator. Topic = {sim_odom_topic}")
         self.simulated_odom_lock = Lock()
         self.latest_simulated_odom = Odometry()
-        self.motion_odom_sub = rospy.Subscriber(sim_odom_topic, Odometry, self.simulated_odom_callback, queue_size=3)
+        self.motion_odom_sub = rospy.Subscriber(
+            sim_odom_topic, Odometry, self.simulated_odom_callback, queue_size=3
+        )
 
         # Motion client variable.
-        rospy.logdebug(f"Setting up simulation controller client. Controller name = {sim_controller_name}")
-        self.sim_controller_client = SimpleActionClient(sim_controller_name, MoveBaseAction)
+        rospy.logdebug(
+            f"Setting up simulation controller client. Controller name = {sim_controller_name}"
+        )
+        self.sim_controller_client = SimpleActionClient(
+            sim_controller_name, MoveBaseAction
+        )
         self.sim_controller_client.wait_for_server()
 
     def estimated_odom_callback(self, odom_msg: Odometry) -> None:
@@ -89,36 +101,43 @@ class PredictPriorBelief(smach.State):
             # Tell the controller what the new goal is.
             next_goal = ud.next_goal
             x, y, quat = (next_goal[0], next_goal[1], heading_to_quat(next_goal[2]))
-            
+
             rospy.logdebug("Creating the goal pose.")
             sim_goal = MoveBaseGoal()
             sim_goal.target_pose.header.frame_id = "map"
             sim_goal.target_pose.header.stamp = rospy.get_rostime()
             sim_goal.target_pose.pose = xyquat_to_ros_pose(x=x, y=y, quat=quat)
-            
+
             duration = 60.0 * 5.0
-            rospy.logdebug(f"Sending the goal to the simulated controller:\n{sim_goal.target_pose.pose}")
+            rospy.logdebug(
+                f"Sending the goal to the simulated controller:\n{sim_goal.target_pose.pose}"
+            )
             self.sim_controller_client.send_goal(sim_goal)
-            
-            rospy.logdebug(f"Waiting for the simulated platform to arrive (timeout = {duration:.1f} s).")
-            result = self.sim_controller_client.wait_for_result(timeout=rospy.Duration.from_sec(duration))
+
+            rospy.logdebug(
+                f"Waiting for the simulated platform to arrive (timeout = {duration:.1f} s)."
+            )
+            result = self.sim_controller_client.wait_for_result(
+                timeout=rospy.Duration.from_sec(duration)
+            )
             if result == False:
-                rospy.logerr(f"Simulated controller did NOT succeed within time limit {duration:.1f} s.")
+                rospy.logerr(
+                    f"Simulated controller did NOT succeed within time limit {duration:.1f} s."
+                )
                 raise Exception("Controller failed.")
 
             # If move base succeeded, let's get the propagated covariance.
             rospy.sleep(1.0)
             with self.simulated_odom_lock:
-                simluated_belief = posewithcovar_to_belief(pose=self.latest_simulated_odom.pose)
+                _, P = posewithcovar_to_belief2D(pose=self.latest_simulated_odom.pose)
                 rospy.logdebug("Propagation completed!")
-                P = simluated_belief.P
 
             # Create the predicted prior belief message.
             prior_belief = xyquat_covar_to_ros_posewithcovar(
                 x=x, y=y, quat=quat, covar=P.flatten().tolist()
             )
             ros_prior_belief = PoseWithCovarianceStamped()
-            ros_prior_belief.header.frame_id="map"
+            ros_prior_belief.header.frame_id = "map"
             ros_prior_belief.header.stamp = rospy.get_rostime()
             ros_prior_belief.pose = prior_belief
 

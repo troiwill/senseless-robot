@@ -3,16 +3,22 @@
     <arg name="y_pos" default="0.0"/>
     <arg name="z_pos" default="0.0"/>
     <arg name="yaw"   default="0.0"/>
+    <arg name="x_pos_var" default="0.5"/>
+    <arg name="y_pos_var" default="0.5"/>
+    <arg name="yaw_var" default="0.08"/>
     <arg name="map_file"     default="$(find turtlebot3_navigation)/maps/map.yaml"/>
     <arg name="octomap_file" default=""/>
     <arg name="sim_ns" default="sim"/>
     <arg name="tf_prefix" default="tb3"/>
 
-    <!-- EKF for global localization -->
+    <!-- EKF for global localization for "real" robot -->
     <include file="$(find senseless_robot_ros)/launch/includes/ekf.launch.xml">
-        <arg name="start_x_pos" value="$(arg x_pos)"/>
-        <arg name="start_y_pos" value="$(arg y_pos)"/>
-        <arg name="start_yaw" value="$(arg yaw)"/>
+        <arg name="init_x_pos" value="$(arg x_pos)"/>
+        <arg name="init_y_pos" value="$(arg y_pos)"/>
+        <arg name="init_yaw" value="$(arg yaw)"/>
+        <arg name="init_x_pos_var" value="$(arg x_pos_var)"/>
+        <arg name="init_y_pos_var" value="$(arg y_pos_var)"/>
+        <arg name="init_yaw_var" value="$(arg yaw_var)"/>
         <arg name="tf_prefix" value="$(arg tf_prefix)"/>
         <arg name="world_frame" value="map"/>
         <arg name="map_frame" value="map"/>
@@ -49,7 +55,7 @@
     <node pkg="tf" type="static_transform_publisher" name="odom_to_sim_odom"
         args="0 0 0 0 0 0 $(arg tf_prefix)/odom $(arg tf_prefix)/$(arg sim_ns)/odom 100"/>
 
-    <!-- Move base for navigation -->
+    <!-- Move base for "real" navigation -->
     <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml">
         <arg name="model" value="senseless_waffle"/>
         <arg name="move_forward_only" value="false"/>
@@ -59,9 +65,10 @@
         <arg name="map_topic" value="map"/>
     </include>
 
-    <!-- Simulates the belief propagation -->
+    <!-- Node and move_base simulate belief propagation -->
     <node pkg="senseless_robot_ros" type="simulated_motion_node" name="simulated_motion_node"
         required="true" output="screen"/>
+
     <group ns="$(arg sim_ns)">
         <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml">
             <arg name="model" value="senseless_waffle"/>
@@ -70,6 +77,6 @@
             <arg name="odom_topic" value="odom"/>
             <arg name="cmd_vel_topic" value="cmd_vel"/>
             <arg name="map_topic" value="/$(arg tf_prefix)/map"/>
-        </include>        
+        </include>
     </group>
 </launch>

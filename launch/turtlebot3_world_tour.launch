@@ -3,6 +3,9 @@
     <arg name="y_pos" default="-0.5"/>
     <arg name="z_pos" default="0.0"/>
     <arg name="yaw" default="0.0"/>
+    <arg name="x_pos_var" default="0.5"/>
+    <arg name="y_pos_var" default="0.5"/>
+    <arg name="yaw_var" default="0.08"/>
     <arg name="rviz_file" default="$(find senseless_robot_ros)/rviz/senseless_robot_default.rviz"/>
     <arg name="map_file" default="$(find turtlebot3_navigation)/maps/map.yaml"/>
     <arg name="node_start_delay" default="5.0"/>
@@ -41,6 +44,9 @@
             <arg name="x_pos" value="$(arg x_pos)"/>
             <arg name="y_pos" value="$(arg y_pos)"/>
             <arg name="yaw" value="$(arg yaw)"/>
+            <arg name="x_pos_var" value="$(arg x_pos_var)"/>
+            <arg name="y_pos_var" value="$(arg y_pos_var)"/>
+            <arg name="yaw_var" value="$(arg yaw_var)"/>
             <arg name="map_file" value="$(arg map_file)"/>
             <arg name="octomap_file" value=""/>
             <arg name="sim_ns" value="$(arg sim_ns)"/>

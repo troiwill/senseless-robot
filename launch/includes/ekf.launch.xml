@@ -1,15 +1,42 @@
 <launch>
-    <!-- EKF config -->
-    <arg name="start_x_pos" default="0"/>
-    <arg name="start_y_pos" default="0"/>
-    <arg name="start_yaw" default="0"/>
+    <!-- Start pose -->
+    <arg name="init_x_pos" default="0"/>
+    <arg name="init_y_pos" default="0"/>
+    <arg name="init_yaw" default="0"/>
+
+    <!-- Start 2D pose variance -->
+    <arg name="init_x_pos_var" default="0.33"/>
+    <arg name="init_y_pos_var" default="0.33"/>
+    <arg name="init_yaw_var" default="0.087"/>
+
+    <!-- Namespace and frames -->
     <arg name="tf_prefix" default="tb3"/>
     <arg name="world_frame" default="map"/>
     <arg name="map_frame" default="map"/>
     
-    <arg name="start_state" value="
-        [ $(arg start_x_pos), $(arg start_y_pos),  0, 0.0,  0.0,  $(arg start_yaw),
+    <!-- WARNING: Do not set the following variables -->
+    <arg name="init_state" value="
+        [ $(arg init_x_pos), $(arg init_y_pos),  0, 0.0,  0.0,  $(arg init_yaw),
           0,  0,  0, 0.0,  0.0,  0.0, 0.0,  0.0,  0.0]"/>
+
+    <arg name="init_process_noise_covariance" value="
+        [$(arg init_x_pos_var), 0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+            0,    $(arg init_y_pos_var),  0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+            0,    0,    1e-9, 0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+            0,    0,    0,    1e-9, 0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+            0,    0,    0,    0,    1e-9, 0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+            0,    0,    0,    0,    0,    $(arg init_yaw_var), 0,    0,    0,    0,     0,     0,     0,    0,    0,
+            0,    0,    0,    0,    0,    0,    1e-3, 0,    0,    0,     0,     0,     0,    0,    0,
+            0,    0,    0,    0,    0,    0,    0,    1e-3, 0,    0,     0,     0,     0,    0,    0,
+            0,    0,    0,    0,    0,    0,    0,    0,    1e-9, 0,     0,     0,     0,    0,    0,
+            0,    0,    0,    0,    0,    0,    0,    0,    0,    1e-9,  0,     0,     0,    0,    0,
+            0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     1e-9,  0,     0,    0,    0,
+            0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     1e-3 ,  0,    0,    0,
+            0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     1e-9, 0,    0,
+            0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    1e-9, 0,
+            0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    1e-9]"/>
+
+    <!-- <arg name="process_noise_covariance" value=""/> -->
 
     <!-- EKF for global localization -->
     <node pkg="robot_localization" type="ekf_localization_node" name="ekf_node_map" clear_params="true" output="screen">
@@ -35,31 +62,21 @@
             true, false, false, false, false, true,
             false, false, false]
         </rosparam>
-        <param name="imu0" value="imu" />
+        <param name="odom0_differential" value="true"/>
+        <!-- <param name="imu0" value="imu" />
         <rosparam param="imu0_config">
             [false, false, false, false, false, true,
             false, false, false, false, false, true,
             true, false, false]
-        </rosparam>
+        </rosparam> -->
         <rosparam param="initial_state" subst_value="true">
-            $(arg start_state)
+            $(arg init_state)
         </rosparam>
-        <rosparam param="initial_estimate_covariance">
-            [0.33, 0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
-            0,    0.33,  0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
-            0,    0,    1e-9, 0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
-            0,    0,    0,    1e-9, 0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
-            0,    0,    0,    0,    1e-9, 0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
-            0,    0,    0,    0,    0,    0.087, 0,    0,    0,    0,     0,     0,     0,    0,    0,
-            0,    0,    0,    0,    0,    0,    1e-3, 0,    0,    0,     0,     0,     0,    0,    0,
-            0,    0,    0,    0,    0,    0,    0,    1e-3, 0,    0,     0,     0,     0,    0,    0,
-            0,    0,    0,    0,    0,    0,    0,    0,    1e-9, 0,     0,     0,     0,    0,    0,
-            0,    0,    0,    0,    0,    0,    0,    0,    0,    1e-9,  0,     0,     0,    0,    0,
-            0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     1e-9,  0,     0,    0,    0,
-            0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     1e-3 ,  0,    0,    0,
-            0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     1e-9, 0,    0,
-            0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    1e-9, 0,
-            0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    1e-9]
+        <rosparam param="initial_estimate_covariance" subst_value="true">
+            $(arg init_process_noise_covariance)
         </rosparam>
+        <!-- <rosparam param="process_noise_covariance" subst_value="true">
+            $(arg process_noise_covariance)
+        </rosparam> -->
     </node>
 </launch>

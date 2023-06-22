@@ -6,6 +6,7 @@ from senseless_robot.states import (
     PredictPriorBelief,
     SendRendezvousBelief,
     MoveToRendezvousPose,
+    AcknowledgeMeasurement,
     ListenForMeasurement,
     UpdateBelief,
 )
@@ -33,6 +34,7 @@ class RendezvousStateMachine:
         """Build the rendezvous state machine for a 'senseless' robot."""
 
         RENDEZVOUS_STATE_MACHINE_NAME = __class__.__name__
+        UPDATE_STATE_MACHINE_NAME = "UpdateStateMachine"
 
         self.robot_state_machine = smach.StateMachine(
             outcomes=[
@@ -98,17 +100,41 @@ class RendezvousStateMachine:
                 label=ListenForMeasurement.__name__,
                 state=ListenForMeasurement(),
                 transitions={
-                    ListenForMeasurement.OC_RECEIVED: UpdateBelief.__name__,
+                    ListenForMeasurement.OC_RECEIVED: UPDATE_STATE_MACHINE_NAME,
                     ListenForMeasurement.OC_FAILURE: RendezvousMachineResult.failed.name,
                 },
             )
 
+            update_concurrent_machine = smach.Concurrence(
+                outcomes=[
+                    RendezvousMachineResult.success.name,
+                    RendezvousMachineResult.failed.name,
+                ],
+                default_outcome=RendezvousMachineResult.failed.name,
+                outcome_map={
+                    RendezvousMachineResult.success.name: {
+                        AcknowledgeMeasurement.__name__: AcknowledgeMeasurement.OC_SENT,
+                        UpdateBelief.__name__: UpdateBelief.OC_SUCCESS,
+                    },
+                },
+                input_keys=[ListenForMeasurement.OK_POSE_MEASUREMENTS],
+            )
+
+            with update_concurrent_machine:
+                smach.Concurrence.add(
+                    label=AcknowledgeMeasurement.__name__, state=AcknowledgeMeasurement()
+                )
+
+                smach.Concurrence.add(
+                    label=UpdateBelief.__name__, state=UpdateBelief()
+                )
+
             smach.StateMachine.add(
-                label=UpdateBelief.__name__,
-                state=UpdateBelief(),
+                label=UPDATE_STATE_MACHINE_NAME,
+                state=update_concurrent_machine,
                 transitions={
-                    UpdateBelief.OC_SUCCESS: ComputeNextPose.__name__,
-                    UpdateBelief.OC_FAILURE: RendezvousMachineResult.failed.name,
+                    RendezvousMachineResult.success.name: ComputeNextPose.__name__,
+                    RendezvousMachineResult.failed.name: RendezvousMachineResult.failed.name,
                 },
             )
 

@@ -58,7 +58,7 @@
     <!-- Move base for "real" navigation -->
     <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml">
         <arg name="model" value="senseless_waffle"/>
-        <arg name="move_forward_only" value="false"/>
+        <arg name="move_forward_only" value="true"/>
         <arg name="cmd_vel_topic" value="cmd_vel"/>
         <arg name="odom_topic" value="odom"/>
         <arg name="rosparam_tf_prefix" value="$(arg tf_prefix)"/>
@@ -72,7 +72,7 @@
     <group ns="$(arg sim_ns)">
         <include file="$(find senseless_robot_ros)/launch/includes/move_base.launch.xml">
             <arg name="model" value="senseless_waffle"/>
-            <arg name="move_forward_only" value="false"/>
+            <arg name="move_forward_only" value="true"/>
             <arg name="rosparam_tf_prefix" value="$(arg tf_prefix)/$(arg sim_ns)"/>
             <arg name="odom_topic" value="odom"/>
             <arg name="cmd_vel_topic" value="cmd_vel"/>

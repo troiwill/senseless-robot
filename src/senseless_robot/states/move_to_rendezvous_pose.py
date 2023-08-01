@@ -3,6 +3,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import PoseWithCovarianceStamped
 import rospy
 import smach
+import traceback
 
 
 class MoveToRendezvousPose(smach.State):
@@ -61,6 +62,9 @@ class MoveToRendezvousPose(smach.State):
                 raise Exception("Controller failed.")
 
         except:
+            rospy.logerr(
+                f"An error occurred in {__class__.__name__}:\n{traceback.format_exc()}"
+            )
             outcome = MoveToRendezvousPose.OC_FAILURE
 
         rospy.loginfo(f"{MoveToRendezvousPose.__name__} outcome: {outcome}")

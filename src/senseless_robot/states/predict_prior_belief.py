@@ -12,6 +12,7 @@ from senseless_robot.states.utils import (
     xyquat_covar_to_ros_posewithcovar,
 )
 from threading import Lock
+import traceback
 
 
 class PredictPriorBelief(smach.State):
@@ -144,6 +145,9 @@ class PredictPriorBelief(smach.State):
             ud.pred_prior_belief = ros_prior_belief
 
         except:
+            rospy.logerr(
+                f"An error occurred in {__class__.__name__}:\n{traceback.format_exc()}"
+            )
             outcome = PredictPriorBelief.OC_FAILURE
 
         rospy.loginfo(f"{PredictPriorBelief.__name__} outcome: {outcome}")

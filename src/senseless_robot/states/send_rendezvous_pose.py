@@ -1,6 +1,7 @@
 from geometry_msgs.msg import PoseWithCovarianceStamped
 import rospy
 import smach
+import traceback
 
 
 class SendRendezvousBelief(smach.State):
@@ -51,6 +52,9 @@ class SendRendezvousBelief(smach.State):
 
         # Signal a failure if something goes wrong.
         except:
+            rospy.logerr(
+                f"An error occurred in {__class__.__name__}:\n{traceback.format_exc()}"
+            )
             outcome = SendRendezvousBelief.OC_FAILURE
 
         rospy.loginfo(f"{SendRendezvousBelief.__name__} outcome: {outcome}")

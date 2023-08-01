@@ -3,6 +3,7 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 import rospy
 import smach
 from std_msgs.msg import String
+import traceback
 
 
 class ListenForMeasurement(smach.State):
@@ -23,7 +24,7 @@ class ListenForMeasurement(smach.State):
         # Gather the ROS parameters.
         rospy.logdebug("Gathering the ROS parameters.")
         meas_from_viewer_topic = rospy.get_param("measurement_from_viewer_topic")
-        wait_timeout = float(rospy.get_param("listen_wait_timeout", 30.0))
+        wait_timeout = float(rospy.get_param("listen_wait_timeout", 90.0))
         max_messages = int(rospy.get_param("listen_max_messages", 1))
         listen_delay = float(rospy.get_param("listen_delay", 0.0))
         meas_comms_topic = rospy.get_param("meas_comms_topic")
@@ -113,6 +114,9 @@ class ListenForMeasurement(smach.State):
                 )
 
         except:
+            rospy.logerr(
+                f"An error occurred in {__class__.__name__}:\n{traceback.format_exc()}"
+            )
             outcome = ListenForMeasurement.OC_FAILURE
 
         rospy.loginfo(f"{ListenForMeasurement.__name__} outcome: {outcome}")

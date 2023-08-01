@@ -1,6 +1,7 @@
 import numpy as np
 import rospy
 import smach
+import traceback
 
 
 class ComputeNextPose(smach.State):
@@ -57,6 +58,9 @@ class ComputeNextPose(smach.State):
                 outcome = ComputeNextPose.OC_DONE
 
         except:
+            rospy.logerr(
+                f"An error occurred in {__class__.__name__}:\n{traceback.format_exc()}"
+            )
             outcome = ComputeNextPose.OC_FAILURE
 
         rospy.loginfo(f"{ComputeNextPose.__name__} outcome: {outcome}")

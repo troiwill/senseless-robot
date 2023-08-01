@@ -1,6 +1,7 @@
 from std_msgs.msg import String
 import rospy
 import smach
+import traceback
 
 
 class AcknowledgeMeasurement(smach.State):
@@ -37,6 +38,9 @@ class AcknowledgeMeasurement(smach.State):
                 rospy.sleep(0.01)
 
         except:
+            rospy.logerr(
+                f"An error occurred in {__class__.__name__}:\n{traceback.format_exc()}"
+            )
             outcome = AcknowledgeMeasurement.OC_FAILURE
 
         rospy.loginfo(f"{AcknowledgeMeasurement.__name__} outcome: {outcome}")

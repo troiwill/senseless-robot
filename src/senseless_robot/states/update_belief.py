@@ -1,6 +1,7 @@
 from geometry_msgs.msg import PoseWithCovarianceStamped
 import rospy
 import smach
+import traceback
 
 
 class UpdateBelief(smach.State):
@@ -44,6 +45,9 @@ class UpdateBelief(smach.State):
                 rospy.sleep(0.1)
 
         except:
+            rospy.logerr(
+                f"An error occurred in {__class__.__name__}:\n{traceback.format_exc()}"
+            )
             outcome = UpdateBelief.OC_FAILURE
 
         rospy.loginfo(f"{UpdateBelief.__name__} outcome: {outcome}")
